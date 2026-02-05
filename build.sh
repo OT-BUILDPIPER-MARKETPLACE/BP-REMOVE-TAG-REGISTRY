@@ -8,12 +8,18 @@ source /opt/buildpiper/shell-functions/aws-functions.sh
 
 BUILD_REPOSITORY_URL=`getComponentName`
 BUILD_REPOSITORY_TAG=`getRepositoryTag`
+JSON_FILE="/bp/data/environment_build"
 IMAGE="${BUILD_REPOSITORY_URL}:${BUILD_REPOSITORY_TAG}"
 REPOSITORY_NAME="${BUILD_REPOSITORY_URL#*.amazonaws.com/}"
 AWS_REGION=$(echo "$BUILD_REPOSITORY_URL" | cut -d'.' -f4)
-
+ENV_MASTER=$(jq -r '.environment.environment_master' "$JSON_FILE")
 
 sleep  $SLEEP_DURATION
+
+if [[ "$ENV_MASTER" == "prod" ]]; then
+  logErrorMessage "Image deletion is not allowed in the PROD environment."
+  TASK_STATUS=1
+fi
 
 if [[ -z "$REPOSITORY_NAME" || -z "$BUILD_REPOSITORY_TAG" ]]; then
   logErrorMessage "Usage $REPOSITORY_NAME $BUILD_REPOSITORY_TAG"
@@ -37,11 +43,12 @@ logErrorMessage "AWS CLI is not installed."
   exit 1
 fi
 
-logInfoMessage "----------------------------------"
-logInfoMessage "Repository : $REPOSITORY_NAME"
-logInfoMessage "Tag        : $BUILD_REPOSITORY_TAG"
-logInfoMessage "Region     : $AWS_REGION"
-logInfoMessage "----------------------------------"
+logInfoMessage "------------------------------------------"
+logInfoMessage "Repository  : $REPOSITORY_NAME"
+logInfoMessage "Tag         : $BUILD_REPOSITORY_TAG"
+logInfoMessage "Region      : $AWS_REGION"
+logInfoMessage "Environment : $ENV_MASTER"
+logInfoMessage "-------------------------------------------"
 
 
 if [ -n "$PROFILE" ]; then
@@ -87,9 +94,9 @@ logInfoMessage "Tag found. Proceeding with deletion"
 if [[ "$DELETE_TAG" == "yes" ]]; then
     logWarningMessage "-----------------------------------------------------------------------------------------------"
     logWarningMessage "                                                                                           ----"
-    logWarningMessage "DELETE_TAG is yes — deleting tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME"
+    logWarningMessage "DELETE_TAG is yes deleting tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME"
     logWarningMessage "                                                                                           ----"
-    logWarningMessage "Do NOT use this in the PROD environment."
+    logWarningMessage "Do NOT use this step in the PROD environment."
     logWarningMessage "                                                                                           ----"
     logWarningMessage "-----------------------------------------------------------------------------------------------"
 
@@ -124,7 +131,11 @@ if [[ "$DELETE_TAG" == "yes" ]]; then
   fi
 logInfoMessage "SUCCESS: Tag '$BUILD_REPOSITORY_TAG' deleted from '$REPOSITORY_NAME'."
 else
-  logWarningMessage "Skipping deletion of tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME DELETE_TAG is not set yes"
+    logWarningMessage "-------------------------------------------------------------------------------------------------------------------"
+    logWarningMessage "                                                                                                               ----"
+    logWarningMessage "Skipping deletion of tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME DELETE_TAG is not set yes"
+    logWarningMessage "                                                                                                               ----"
+    logWarningMessage "-------------------------------------------------------------------------------------------------------------------"
 fi
 
 TASK_STATUS=$?
