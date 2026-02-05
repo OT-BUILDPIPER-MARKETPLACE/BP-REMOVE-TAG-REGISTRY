@@ -84,22 +84,40 @@ fi
 
 logInfoMessage "Tag found. Proceeding with deletion"
 
-if [ -n "$PROFILE" ]; then
-    logInfoMessage "AWS PROFILE: $PROFILE"
-    logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$BUILD_REPOSITORY_TAG --region $AWS_REGION --profile $PROFILE"
-    DELETE_OUTPUT=$(aws ecr batch-delete-image --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$BUILD_REPOSITORY_TAG" --region "$AWS_REGION" --output json --profile $PROFILE)
-else
-    logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$BUILD_REPOSITORY_TAG --region $AWS_REGION"
-    DELETE_OUTPUT=$(aws ecr batch-delete-image --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$BUILD_REPOSITORY_TAG" --region "$AWS_REGION" --output json)
-fi
+if [[ "$DELETE_TAG" == "yes" ]]; then
+    logWarningMessage "DELETE_TAG is yes deleting tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME"
 
-if echo "$DELETE_OUTPUT" | grep -q "failures"; then
-  FAIL_COUNT=$(echo "$DELETE_OUTPUT" | jq '.failures | length')
-  if [[ "$FAIL_COUNT" -gt 0 ]]; then
-    logErrorMessage "Failed to delete image tag."
-    logErrorMessage "$DELETE_OUTPUT"
-    exit 1
+  if [ -n "$PROFILE" ]; then
+      logInfoMessage "AWS PROFILE: $PROFILE"
+      logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$BUILD_REPOSITORY_TAG --region $AWS_REGION --profile $PROFILE"
+
+      DELETE_OUTPUT=$(aws ecr batch-delete-image \
+        --repository-name "$REPOSITORY_NAME" \
+        --image-ids imageTag="$BUILD_REPOSITORY_TAG" \
+        --region "$AWS_REGION" \
+        --output json \
+        --profile "$PROFILE")
+  else
+      logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$BUILD_REPOSITORY_TAG --region $AWS_REGION"
+
+      DELETE_OUTPUT=$(aws ecr batch-delete-image \
+        --repository-name "$REPOSITORY_NAME" \
+        --image-ids imageTag="$BUILD_REPOSITORY_TAG" \
+        --region "$AWS_REGION" \
+        --output json)
   fi
+
+  if echo "$DELETE_OUTPUT" | grep -q "failures"; then
+    FAIL_COUNT=$(echo "$DELETE_OUTPUT" | jq '.failures | length')
+    if [[ "$FAIL_COUNT" -gt 0 ]]; then
+      logErrorMessage "Failed to delete image tag."
+      logErrorMessage "$DELETE_OUTPUT"
+      exit 1
+    fi
+  fi
+
+else
+  logInfoMessage "Skipping deletion of tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME DELETE_TAG is not set yes"
 fi
 
 logInfoMessage "SUCCESS: Tag '$BUILD_REPOSITORY_TAG' deleted from '$REPOSITORY_NAME'."
