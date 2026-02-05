@@ -11,11 +11,11 @@ BUILD_REPOSITORY_TAG=`getRepositoryTag`
 IMAGE="${REPOSITORY_NAME}:${BUILD_REPOSITORY_TAG}"
 AWS_REGION=$(echo "$REPOSITORY_NAME" | cut -d'.' -f4)
 
-logInfoMessage "I'll check the docker image layers for ${REPOSITORY_NAME} of tag ${BUILD_REPOSITORY_TAG}"
+
 sleep  $SLEEP_DURATION
 
-if [[ -z "$REPOSITORY_NAME" || -z "$IMAGE_TAG" ]]; then
-  logErrorMessage "Usage $REPOSITORY_NAME $IMAGE_TAG $AWS_REGION"
+if [[ -z "$REPOSITORY_NAME" || -z "$BUILD_REPOSITORY_TAG" ]]; then
+  logErrorMessage "Usage $REPOSITORY_NAME $BUILD_REPOSITORY_TAG $AWS_REGION"
   exit 1
 fi
 
