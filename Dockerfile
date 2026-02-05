@@ -51,7 +51,6 @@ RUN mkdir -p \
     chown -R buildpiper:buildpiper /src /bp /opt /home/buildpiper /tmp/.docker
 
 COPY --chown=buildpiper:buildpiper build.sh /home/buildpiper/build.sh
-COPY --chown=buildpiper:buildpiper login.sh /home/buildpiper/login.sh
 COPY --chown=buildpiper:buildpiper BP-BASE-SHELL-STEPS /opt/buildpiper/shell-functions/
 
 RUN chmod +x /home/buildpiper/build.sh
