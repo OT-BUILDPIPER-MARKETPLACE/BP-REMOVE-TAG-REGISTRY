@@ -15,7 +15,7 @@ AWS_REGION=$(echo "$REPOSITORY_NAME" | cut -d'.' -f4)
 sleep  $SLEEP_DURATION
 
 if [[ -z "$REPOSITORY_NAME" || -z "$BUILD_REPOSITORY_TAG" ]]; then
-  logErrorMessage "Usage $REPOSITORY_NAME $BUILD_REPOSITORY_TAG $AWS_REGION"
+  logErrorMessage "Usage $REPOSITORY_NAME $BUILD_REPOSITORY_TAG"
   exit 1
 fi
 
