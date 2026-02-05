@@ -14,20 +14,21 @@ RUN apk update && apk add --no-cache \
     curl \
     unzip
 
-RUN pip3 install --no-cache-dir awscli
+RUN python3 -m venv /opt/venv
 
+# Install Python tools inside venv (including AWS CLI)
+RUN /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    /opt/venv/bin/pip install --no-cache-dir \
+        awscli \
+        tabulate \
+        cryptography
+
+ENV PATH="/opt/venv/bin:$PATH"
 
 RUN addgroup -g 65522 buildpiper && \
     adduser -D -u 65522 -G buildpiper -h /home/buildpiper buildpiper && \
     chown -R buildpiper:buildpiper /home/buildpiper
 
-RUN python3 -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    /opt/venv/bin/pip install --no-cache-dir \
-        tabulate \
-        cryptography
-
-ENV PATH="/opt/venv/bin:$PATH"
 
 RUN mkdir -p \
     /src/reports \
@@ -47,7 +48,6 @@ USER buildpiper
 WORKDIR /home/buildpiper
 
 ENV SLEEP_DURATION=5s \
-    MAX_ALLOWED_IMAGE_SIZE=180 \
     VALIDATION_FAILURE_ACTION=FAILURE \
     ACTIVITY_SUB_TASK_CODE=IMAGE_SIZE_VALIDATOR
 
