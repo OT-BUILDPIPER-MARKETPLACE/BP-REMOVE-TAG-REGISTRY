@@ -6,10 +6,11 @@ source /opt/buildpiper/shell-functions/str-functions.sh
 source /opt/buildpiper/shell-functions/file-functions.sh
 source /opt/buildpiper/shell-functions/aws-functions.sh
 
-REPOSITORY_NAME=`getComponentName`
+BUILD_REPOSITORY_URL=`getComponentName`
 BUILD_REPOSITORY_TAG=`getRepositoryTag`
-IMAGE="${REPOSITORY_NAME}:${BUILD_REPOSITORY_TAG}"
-AWS_REGION=$(echo "$REPOSITORY_NAME" | cut -d'.' -f4)
+IMAGE="${BUILD_REPOSITORY_URL}:${BUILD_REPOSITORY_TAG}"
+REPOSITORY_NAME="${BUILD_REPOSITORY_URL#*.amazonaws.com/}"
+AWS_REGION=$(echo "$BUILD_REPOSITORY_URL" | cut -d'.' -f4)
 
 
 sleep  $SLEEP_DURATION
@@ -38,7 +39,7 @@ fi
 
 logInfoMessage "----------------------------------"
 logInfoMessage "Repository : $REPOSITORY_NAME"
-logInfoMessage "Tag        : $IMAGE_TAG"
+logInfoMessage "Tag        : $BUILD_REPOSITORY_TAG"
 logInfoMessage "Region     : $AWS_REGION"
 logInfoMessage "----------------------------------"
 
@@ -67,17 +68,17 @@ fi
 
 if [ -n "$PROFILE" ]; then
     logInfoMessage "AWS PROFILE: $PROFILE"
-    logInfoMessage "aws ecr describe-images --repository-name $REPOSITORY_NAME --image-ids imageTag=$IMAGE_TAG --region $AWS_REGION --query 'imageDetails[0].imageTags[0]' --profile $PROFILE"
-    IMAGE_EXISTS=$(aws ecr describe-images --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$IMAGE_TAG" --region "$AWS_REGION" --query 'imageDetails[0].imageTags[0]' --output text --profile $PROFILE 2>/dev/null || true )
+    logInfoMessage "aws ecr describe-images --repository-name $REPOSITORY_NAME --image-ids imageTag=$BUILD_REPOSITORY_TAG --region $AWS_REGION --query 'imageDetails[0].imageTags[0]' --profile $PROFILE"
+    IMAGE_EXISTS=$(aws ecr describe-images --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$BUILD_REPOSITORY_TAG" --region "$AWS_REGION" --query 'imageDetails[0].imageTags[0]' --output text --profile $PROFILE 2>/dev/null || true )
 else
-    logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$IMAGE_TAG --region $AWS_REGION"
-    IMAGE_EXISTS=$(aws ecr describe-images --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$IMAGE_TAG" --region "$AWS_REGION" --query 'imageDetails[0].imageTags[0]' --output text 2>/dev/null || true)
+    logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$BUILD_REPOSITORY_TAG --region $AWS_REGION"
+    IMAGE_EXISTS=$(aws ecr describe-images --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$BUILD_REPOSITORY_TAG" --region "$AWS_REGION" --query 'imageDetails[0].imageTags[0]' --output text 2>/dev/null || true)
 fi
 
 
 
 if [[ "$IMAGE_EXISTS" == "None" || -z "$IMAGE_EXISTS" ]]; then
-  logErrorMessage "Tag '$IMAGE_TAG' does not exist in repository '$REPOSITORY_NAME'."
+  logErrorMessage "Tag '$BUILD_REPOSITORY_TAG' does not exist in repository '$REPOSITORY_NAME'."
   exit 1
 fi
 
@@ -85,11 +86,11 @@ logInfoMessage "Tag found. Proceeding with deletion"
 
 if [ -n "$PROFILE" ]; then
     logInfoMessage "AWS PROFILE: $PROFILE"
-    logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$IMAGE_TAG --region $AWS_REGION --profile $PROFILE"
-    DELETE_OUTPUT=$(aws ecr batch-delete-image --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$IMAGE_TAG" --region "$AWS_REGION" --output json --profile $PROFILE)
+    logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$BUILD_REPOSITORY_TAG --region $AWS_REGION --profile $PROFILE"
+    DELETE_OUTPUT=$(aws ecr batch-delete-image --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$BUILD_REPOSITORY_TAG" --region "$AWS_REGION" --output json --profile $PROFILE)
 else
-    logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$IMAGE_TAG --region $AWS_REGION"
-    DELETE_OUTPUT=$(aws ecr batch-delete-image --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$IMAGE_TAG" --region "$AWS_REGION" --output json --profile $PROFILE)
+    logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$BUILD_REPOSITORY_TAG --region $AWS_REGION"
+    DELETE_OUTPUT=$(aws ecr batch-delete-image --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$BUILD_REPOSITORY_TAG" --region "$AWS_REGION" --output json --profile $PROFILE)
 fi
 
 if echo "$DELETE_OUTPUT" | grep -q "failures"; then
@@ -101,6 +102,6 @@ if echo "$DELETE_OUTPUT" | grep -q "failures"; then
   fi
 fi
 
-logInfoMessage "SUCCESS: Tag '$IMAGE_TAG' deleted from '$REPOSITORY_NAME'."
+logInfoMessage "SUCCESS: Tag '$BUILD_REPOSITORY_TAG' deleted from '$REPOSITORY_NAME'."
 TASK_STATUS=$?
 saveTaskStatus ${TASK_STATUS} ${ACTIVITY_SUB_TASK_CODE}
