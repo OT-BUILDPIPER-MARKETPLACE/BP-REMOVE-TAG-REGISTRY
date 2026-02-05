@@ -37,7 +37,7 @@ RUN mkdir -p \
     /opt/buildpiper/shell-functions \
     /opt/buildpiper/data \
     /bp/workspace && \
-    chown -R buildpiper:buildpiper /src /bp /opt /home/buildpiper /tmp/.docker
+    chown -R buildpiper:buildpiper /src /bp /opt /home/buildpiper
 
 COPY --chown=buildpiper:buildpiper build.sh /home/buildpiper/build.sh
 COPY --chown=buildpiper:buildpiper BP-BASE-SHELL-STEPS /opt/buildpiper/shell-functions/
