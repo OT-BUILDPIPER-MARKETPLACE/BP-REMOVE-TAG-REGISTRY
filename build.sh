@@ -85,7 +85,14 @@ fi
 logInfoMessage "Tag found. Proceeding with deletion"
 
 if [[ "$DELETE_TAG" == "yes" ]]; then
-    logWarningMessage "DELETE_TAG is yes deleting tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME"
+    logWarningMessage "-----------------------------------------------------------------------------------------------"
+    logWarningMessage "                                                                                           ----"
+    logWarningMessage "DELETE_TAG is yes — deleting tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME"
+    logWarningMessage "                                                                                           ----"
+    logWarningMessage "Do NOT use this in the PROD environment."
+    logWarningMessage "                                                                                           ----"
+    logWarningMessage "-----------------------------------------------------------------------------------------------"
+
 
   if [ -n "$PROFILE" ]; then
       logInfoMessage "AWS PROFILE: $PROFILE"
