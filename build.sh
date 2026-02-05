@@ -90,7 +90,7 @@ if [ -n "$PROFILE" ]; then
     DELETE_OUTPUT=$(aws ecr batch-delete-image --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$BUILD_REPOSITORY_TAG" --region "$AWS_REGION" --output json --profile $PROFILE)
 else
     logInfoMessage "aws ecr batch-delete-image --repository-name $REPOSITORY_NAME --image-ids imageTag=$BUILD_REPOSITORY_TAG --region $AWS_REGION"
-    DELETE_OUTPUT=$(aws ecr batch-delete-image --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$BUILD_REPOSITORY_TAG" --region "$AWS_REGION" --output json --profile $PROFILE)
+    DELETE_OUTPUT=$(aws ecr batch-delete-image --repository-name "$REPOSITORY_NAME" --image-ids imageTag="$BUILD_REPOSITORY_TAG" --region "$AWS_REGION" --output json)
 fi
 
 if echo "$DELETE_OUTPUT" | grep -q "failures"; then
