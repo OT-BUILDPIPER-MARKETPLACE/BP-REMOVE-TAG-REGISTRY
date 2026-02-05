@@ -115,11 +115,10 @@ if [[ "$DELETE_TAG" == "yes" ]]; then
       exit 1
     fi
   fi
-
+logInfoMessage "SUCCESS: Tag '$BUILD_REPOSITORY_TAG' deleted from '$REPOSITORY_NAME'."
 else
-  logInfoMessage "Skipping deletion of tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME DELETE_TAG is not set yes"
+  logWarningMessage "Skipping deletion of tag $BUILD_REPOSITORY_TAG from repository $REPOSITORY_NAME DELETE_TAG is not set yes"
 fi
 
-logInfoMessage "SUCCESS: Tag '$BUILD_REPOSITORY_TAG' deleted from '$REPOSITORY_NAME'."
 TASK_STATUS=$?
 saveTaskStatus ${TASK_STATUS} ${ACTIVITY_SUB_TASK_CODE}
