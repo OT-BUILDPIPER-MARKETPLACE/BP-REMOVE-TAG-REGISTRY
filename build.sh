@@ -18,8 +18,21 @@ sleep  $SLEEP_DURATION
 
 if [[ "$ENV_MASTER" == "prod" ]]; then
   logErrorMessage "Image deletion is not allowed in the PROD environment."
+  add_event "ENVIRONMENT VALIDATION" "Failed" \
+        "Image deletion blocked in PROD" \
+        "Environment: $ENV_MASTER"
   TASK_STATUS=1
+  saveTaskStatus ${TASK_STATUS} ${ACTIVITY_SUB_TASK_CODE}
+  exit 1
 fi
+
+add_event "ENVIRONMENT VALIDATION" "Successful" \
+      "Environment validated for deletion" \
+      "Environment: $ENV_MASTER"
+
+add_event "INITIALIZATION" "Successful" \
+      "Task initialization completed" \
+      "Target Image: $IMAGE"
 
 if [[ -z "$REPOSITORY_NAME" || -z "$BUILD_REPOSITORY_TAG" ]]; then
   logErrorMessage "Usage $REPOSITORY_NAME $BUILD_REPOSITORY_TAG"
@@ -29,10 +42,16 @@ fi
 if [ "${ASSUME_ROLE}" == "true" ]; then
     if [ -z "$ACCOUNT_ID" ] || [ -z "$ROLE_NAME" ]; then
           logErrorMessage "Error: ACCOUNT_ID and ROLE_NAME must be set as environment variables when ASSUME_ROLE=true"
+          add_event "AWS ROLE ASSUMPTION" "Failed" \
+                "Missing ACCOUNT_ID or ROLE_NAME" \
+                "ASSUME_ROLE is true but credentials missing"
           exit 1
     fi
       ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_NAME}"
       getAssumeRole "$ROLE_ARN"
+      add_event "AWS ROLE ASSUMPTION" "Successful" \
+            "Successfully assumed AWS role" \
+            "Role ARN: $ROLE_ARN"
 else
     logInfoMessage "ASSUME_ROLE is not set to 'true', skipping role assumption"
 fi
@@ -69,9 +88,16 @@ else
         --repository-names "$REPOSITORY_NAME" \
         --region "$AWS_REGION" >/dev/null 2>&1; then
         logErrorMessage "Repository '$REPOSITORY_NAME' not found."
+        add_event "ECR REPOSITORY CHECK" "Failed" \
+              "Repository not found" \
+              "Repository: $REPOSITORY_NAME"
         exit 1
     fi
 fi
+
+add_event "ECR REPOSITORY CHECK" "Successful" \
+      "ECR repository found" \
+      "Repository: $REPOSITORY_NAME"
 
 if [ -n "$PROFILE" ]; then
     logInfoMessage "AWS PROFILE: $PROFILE"
@@ -86,8 +112,15 @@ fi
 
 if [[ "$IMAGE_EXISTS" == "None" || -z "$IMAGE_EXISTS" ]]; then
   logErrorMessage "Tag '$BUILD_REPOSITORY_TAG' does not exist in repository '$REPOSITORY_NAME'."
+  add_event "IMAGE EXISTENCE CHECK" "Failed" \
+        "Image tag not found" \
+        "Tag: $BUILD_REPOSITORY_TAG in $REPOSITORY_NAME"
   exit 1
 fi
+
+add_event "IMAGE EXISTENCE CHECK" "Successful" \
+      "Image tag found" \
+      "Tag: $BUILD_REPOSITORY_TAG in $REPOSITORY_NAME"
 
 logInfoMessage "Tag found. Proceeding with deletion"
 
@@ -126,9 +159,15 @@ if [[ "$DELETE_TAG" == "yes" ]]; then
     if [[ "$FAIL_COUNT" -gt 0 ]]; then
       logErrorMessage "Failed to delete image tag."
       logErrorMessage "$DELETE_OUTPUT"
+      add_event "IMAGE DELETION" "Failed" \
+            "Failed to delete image tag" \
+            "AWS Error: $DELETE_OUTPUT"
       exit 1
     fi
   fi
+  add_event "IMAGE DELETION" "Successful" \
+        "Image tag deleted successfully" \
+        "Tag $BUILD_REPOSITORY_TAG removed from $REPOSITORY_NAME"
 logInfoMessage "SUCCESS: Tag '$BUILD_REPOSITORY_TAG' deleted from '$REPOSITORY_NAME'."
 else
     logWarningMessage "-------------------------------------------------------------------------------------------------------------------"
@@ -140,3 +179,6 @@ fi
 
 TASK_STATUS=$?
 saveTaskStatus ${TASK_STATUS} ${ACTIVITY_SUB_TASK_CODE}
+add_event "TASK EXECUTION" "Successful" \
+      "Tag removal task completed" \
+      "Processed image: $IMAGE"
