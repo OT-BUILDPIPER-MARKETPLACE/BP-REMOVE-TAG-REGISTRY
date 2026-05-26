@@ -1,0 +1,3 @@
+image: registry.buildpiper.in/bp-impl/remove-tag-registry
+old_branch: nr_v0.1
+new_branch: nr_v0.2
