@@ -336,13 +336,22 @@ PY
     logInfoMessage "> Successfully retrieved credentials for user: ${REG_USER}"
 
     # Challenge the registry to check auth type (Bearer vs Basic)
-    logInfoMessage "> Querying registry for authentication challenge: https://${REGISTRY_HOST}/v2/"
-    CHALLENGE=$(curl -sI -u "${REG_USER}:${REG_PASS}" \
+    # Use GET request with header dump instead of HEAD request, as HEAD is disallowed on some registries
+    logInfoMessage "> Querying registry for authentication challenge: https://${REGISTRY_HOST}/v2/${REPOSITORY_NAME}/manifests/${BUILD_REPOSITORY_TAG}"
+    
+    CHALLENGE=$(curl -s -D - -o /tmp/challenge_body.json -u "${REG_USER}:${REG_PASS}" \
         -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
         "https://${REGISTRY_HOST}/v2/${REPOSITORY_NAME}/manifests/${BUILD_REPOSITORY_TAG}")
 
     HTTP_STATUS=$(echo "$CHALLENGE" | grep -i "HTTP/" | head -n 1 | awk '{print $2}')
     logInfoMessage "> Registry status response for manifest query: ${HTTP_STATUS}"
+
+    if [[ "$HTTP_STATUS" != "200" && "$HTTP_STATUS" != "401" ]]; then
+        logWarningMessage "> Registry challenge returned unexpected status: ${HTTP_STATUS}"
+        if [ -f /tmp/challenge_body.json ]; then
+            logWarningMessage "> Challenge response: $(cat /tmp/challenge_body.json)"
+        fi
+    fi
 
     if echo "$CHALLENGE" | grep -iq "Www-Authenticate: Bearer"; then
         logInfoMessage "> Bearer token authentication challenge detected"
@@ -370,7 +379,7 @@ PY
     # Image Tag Existence Check (V2 Registry)
     logInfoMessage "> Checking if tag '${BUILD_REPOSITORY_TAG}' exists in repository '${REPOSITORY_NAME}'..."
     
-    MANIFEST_RESP=$(curl -sI \
+    MANIFEST_RESP=$(curl -s -D - -o /tmp/manifest_body.json \
         -H "${AUTH_HEADER}" \
         -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
         "https://${REGISTRY_HOST}/v2/${REPOSITORY_NAME}/manifests/${BUILD_REPOSITORY_TAG}")
@@ -379,6 +388,12 @@ PY
 
     if [ -z "$DIGEST" ]; then
         logErrorMessage "> Tag '${BUILD_REPOSITORY_TAG}' not found or Digest could not be retrieved from ${REGISTRY_HOST}"
+        if [ -f /tmp/manifest_body.json ]; then
+            logErrorMessage "> Registry response body: $(cat /tmp/manifest_body.json)"
+        fi
+        logErrorMessage "> Registry response headers: "
+        echo "$MANIFEST_RESP" | head -n 25
+        
         add_event "IMAGE_EXISTENCE_CHECK" "Failed" \
             "Image tag not found in registry" \
             "Tag: ${BUILD_REPOSITORY_TAG} | Repository: ${REPOSITORY_NAME} | Registry: ${REGISTRY_HOST}"
